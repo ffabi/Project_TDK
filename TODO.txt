@@ -16,7 +16,6 @@ save final eval to collected csv
 
 args
 unique id for each run
-VCS # todo!!!
 
 analyze data: take average depth, disttribution, etc
 
