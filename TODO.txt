@@ -1,0 +1,33 @@
+RADAM https://pypi.org/project/keras-radam/
+
+copy source on train begin
+
+load model to evaluate
+
+on train end load back best model
+
+save example images while training
+
+visualize model
+
+save error images
+
+save final eval to collected csv
+
+args
+unique id for each run
+VCS # todo!!!
+
+analyze data: take average depth, disttribution, etc
+
+eval on whole test set at train end
+
+Karpathy: final bias to the mean
+
+Use pretrained
+
+Visualize layers
+
+CustomCallback
+
+freeze first (2-3) pretrained layers
