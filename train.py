@@ -1,23 +1,26 @@
 import argparse
+from datetime import datetime
 
 import tensorflow as tf
 from keras.optimizers import Adam
 
-from CallbackGenerator import CallbackGenerator, time
+from callbacks import *
 from DataGenerator import DataGenerator
 from LossGenerator import LossGenerator
 from Models import OriginalModel, simple_dense
 
+from keras_radam import RAdam
 
-def train():
+
+def train(args):
     tf.set_random_seed(1234)
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction = 0.92)
     sess = tf.Session(config = tf.ConfigProto(gpu_options = gpu_options))
     # sess = tf.Session()
     input_shape = (576, 1024, 3)
     print("Creating model with input shape:", input_shape)
-    model = OriginalModel.create_model(shape = input_shape)
-    # model = simple_dense.create_model(shape = input_shape)
+    # model = OriginalModel.create_model(shape = input_shape)
+    model = simple_dense.create_model(shape = input_shape)
 
     # todo split resized
     # create_resized_dataset(input_shape[0], input_shape[1])
@@ -35,6 +38,7 @@ def train():
 
     # model.compile(optimizer = Adam(lr = 0.0001, decay = 0), loss = "mse", metrics = ["mse"])
     model.compile(optimizer = Adam(lr = 0.0001, decay = 0), loss = combined_loss, metrics = losses)
+    # model.compile(optimizer = RAdam(), loss = combined_loss, metrics = losses)
 
     # test_generator = DataGenerator(
     #     set_type = "test",
@@ -46,23 +50,23 @@ def train():
 
     train_generator = DataGenerator(
         set_type = "train",
-        batch_size = 1,
+        batch_size = args.batchsize,
         shuffle = True,
-        keep_ratio = 1,
+        keep_ratio = args.train_keep,
         shape = input_shape,
     )
     val_generator = DataGenerator(
         set_type = "val",
         batch_size = 1,
         shuffle = True,
-        keep_ratio = 0.1,
+        keep_ratio = args.val_keep,
         shape = input_shape,
     )
     assert train_generator.__len__() != 0 and val_generator.__len__() != 0, "No data received from the data generator"
 
-    callback_generator = CallbackGenerator("long_whole_set_201", input_shape)
-    callback_generator.set_model(model = model)
-    callbacks = callback_generator.get_callbacks()
+    name = args.name + "_" + str(args.id) + "_" + datetime.now().strftime("%m_%d_%H_%M")
+
+    callbacks = get_callbacks(args, os.path.join("../results", name))
 
     with sess.as_default():
         print("Starting training process")
@@ -72,7 +76,7 @@ def train():
             validation_data = val_generator,
             use_multiprocessing = False,
             shuffle = True,
-            epochs = 40,
+            epochs = args.epochs,
             max_queue_size = 32,
             callbacks = callbacks,
             # callbacks = None,
@@ -86,21 +90,24 @@ if __name__ == '__main__':
         description = 'Monocular Depth Estimation on Synthetic Dataset with Dense Ground Truth')
 
     # todo
-    parser.add_argument('--id', type = int, default = 1, help = 'Batch size')
+    parser.add_argument('--id', type = int, default = 0, help = 'Train id')
     parser.add_argument('--batchsize', type = int, default = 1, help = 'Batch size')
-    parser.add_argument('--epochs', type = int, default = 100, help = 'Number of epochs')
-    parser.add_argument('--eval_freq', type = int, default = 100, help = 'Number of epochs')
+    parser.add_argument('--epochs', type = int, default = 1, help = 'Number of epochs')
+    parser.add_argument('--eval_freq', type = int, default = 100, help = 'todo')
 
-    parser.add_argument('--train_keep', type = float, default = 1, help = 'Number of epochs')
-    parser.add_argument('--eval_keep', type = float, default = 1, help = 'Number of epochs')
-    parser.add_argument('--test_keep', type = float, default = 1, help = 'Number of epochs')
+    parser.add_argument('--train_keep', type = float, default = 0.001, help = 'Number of epochs')
+    parser.add_argument('--val_keep', type = float, default = 0.01, help = 'Number of epochs')
+    parser.add_argument('--test_keep', type = float, default = 0.1, help = 'Number of epochs')
 
     parser.add_argument('--name', default = 'debug', type = str, help = 'Name prefix')
     parser.add_argument('--checkpoint', type = str, default = '', help = 'Start training from an existing model.')
+    parser.add_argument('--shape', type = str, default = '(576, 1024)', help = 'Start training from an existing model.')
 
     parser.add_argument('--shuffle', dest = 'shuffle', action = 'store_true', help = 'Turn shuffle on or off')
 
     args = parser.parse_args()
+    
+    args.shape = eval(args.shape)
 
-    train()
+    train(args)
     print((time.time() - start), "s")

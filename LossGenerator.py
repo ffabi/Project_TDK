@@ -51,6 +51,21 @@ def ssim_loss(y_true, y_pred, weight = 1, max_depth_val = 100):
     return K.mean(K.clip((1 - tf.image.ssim(y_true, y_pred, max_depth_val)) * 0.5, 0, 1)) * weight
 
 
+def get_absolute_error_image(y_true, y_pred):
+    return K.abs(y_pred - y_true)
+
+
+def get_first_derivative_error_image(y_true, y_pred):
+    dy_true, dx_true = first_derivative(y_true)
+    dy_pred, dx_pred = first_derivative(y_pred)
+    return K.abs(dy_pred - dy_true) + K.abs(dx_pred - dx_true)
+
+
+def get_second_derivative_error_image(y_true, y_pred):
+    dy_true, dx_true = second_derivative(y_true)
+    dy_pred, dx_pred = second_derivative(y_pred)
+    return K.abs(dy_pred - dy_true) + K.abs(dx_pred - dx_true)
+
 class LossGenerator:
     
     def __init__(self, mae_w = 1, mse_w = 1, first_grad_w = 1, second_grad_w = 1, ssim_w = 1) -> None:
@@ -118,4 +133,3 @@ if __name__ == '__main__':
             print(func.__name__, func(t, t * -1.01).eval())
         
         # print((ssim_loss(t,t)).dtype)
-        

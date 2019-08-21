@@ -1,5 +1,6 @@
 import matplotlib.cm as cm
 import numpy as np
+import os
 
 
 def to_bgra(depth):
