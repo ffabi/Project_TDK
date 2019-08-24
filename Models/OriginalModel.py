@@ -2,28 +2,44 @@ import sys
 
 import tensorflow as tf
 from keras import applications
-from keras.layers import Conv2D, LeakyReLU, Concatenate
+from keras.layers import Conv2D, LeakyReLU, Concatenate, Dropout
 from keras.models import Model, load_model
 
-from Layers import BilinearUpSampling2D
+from Classes.Layers import BilinearUpSampling2D
 
 
-def create_model(shape, existing = '', is_twohundred = True, is_halffeatures = True):
+def create_model(shape, existing = '', is_twohundred = False, is_halffeatures = True, debug = False):
+    # or todo: change decoder to match encoder
+    assert shape[0] % 2 ** 5 == 0 and shape[
+        1] % 2 ** 5 == 0, "Both shapes must me dividable by 2 five times becouse of the downsampling"
+
     if len(existing) == 0:
         print('Loading base model (DenseNet)..')
 
         # Encoder Layers
-        if is_twohundred:
-            base_model = applications.DenseNet201(input_shape = (None, None, 3), include_top = False)
+        if not debug:
+            if is_twohundred:
+                base_model = applications.DenseNet201(
+                    input_shape = (None, None, 3),
+                    include_top = False
+                )
+            else:
+                base_model = applications.DenseNet169(
+                    input_shape = (None, None, 3),
+                    include_top = False,
+                    # dropout_rate = 0.5 # todo update libraries
+                )
         else:
-            base_model = applications.DenseNet169(input_shape = (None, None, 3), include_top = False)
-            # base_model = applications.DenseNet121(input_shape = (None, None, 3), include_top = False)
+            base_model = applications.DenseNet169(
+                input_shape = shape,
+                include_top = False
+            )
 
         print('Base model loaded.')
-
         # Starting point for decoder
         base_model_output_shape = base_model.layers[-1].output.shape
         base_model_output_shape = base_model_output_shape.as_list()
+
         # Layer freezing?
         for layer in base_model.layers:
             layer.trainable = True
@@ -41,9 +57,11 @@ def create_model(shape, existing = '', is_twohundred = True, is_halffeatures = T
                 [up_i, base_model.get_layer(concat_with).output])  # Skip connection
             up_i = Conv2D(filters = filters, kernel_size = 3, strides = 1, padding = 'same', name = name + '_convA')(
                 up_i)
+            up_i = Dropout(0.5)(up_i)
             up_i = LeakyReLU(alpha = 0.2)(up_i)
             up_i = Conv2D(filters = filters, kernel_size = 3, strides = 1, padding = 'same', name = name + '_convB')(
                 up_i)
+            up_i = Dropout(0.5)(up_i)
             up_i = LeakyReLU(alpha = 0.2)(up_i)
             return up_i
 
@@ -63,7 +81,7 @@ def create_model(shape, existing = '', is_twohundred = True, is_halffeatures = T
         # Create the model
         model = Model(inputs = base_model.input, outputs = conv3)
     else:
-        # Load model from file
+        # TODO load model from file
         if not existing.endswith('.h5'):
             sys.exit('Please provide a correct model file when using [existing] argument.')
         custom_objects = { 'BilinearUpSampling2D': BilinearUpSampling2D, 'depth_loss_function': depth_loss_function }
@@ -76,10 +94,10 @@ def create_model(shape, existing = '', is_twohundred = True, is_halffeatures = T
 
 
 if __name__ == '__main__':
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction = 0.1)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction = 0.02)
     sess = tf.Session(config = tf.ConfigProto(gpu_options = gpu_options))
 
-    model = create_model((720, 1280))
+    model = create_model((576, 1024, 3), debug = True)
     model.summary()
-    for l in model.layers:
+    for l in model.layers[:10]:
         print(l.name, l.input_shape, l.output_shape)

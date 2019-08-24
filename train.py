@@ -1,15 +1,10 @@
 import argparse
 from datetime import datetime
 
-import tensorflow as tf
 from keras.optimizers import Adam
 
-from callbacks import *
-from DataGenerator import DataGenerator
-from LossGenerator import LossGenerator
-from Models import OriginalModel, simple_dense
-
-from keras_radam import RAdam
+from Models import OriginalModel
+from Classes.CustomCallback import *
 
 
 def train(args):
@@ -19,8 +14,8 @@ def train(args):
     # sess = tf.Session()
     input_shape = (576, 1024, 3)
     print("Creating model with input shape:", input_shape)
-    # model = OriginalModel.create_model(shape = input_shape)
-    model = simple_dense.create_model(shape = input_shape)
+    model = OriginalModel.create_model(shape = input_shape)
+    # model = simple_dense.create_model(shape = input_shape)
 
     # todo split resized
     # create_resized_dataset(input_shape[0], input_shape[1])
@@ -40,25 +35,19 @@ def train(args):
     model.compile(optimizer = Adam(lr = 0.0001, decay = 0), loss = combined_loss, metrics = losses)
     # model.compile(optimizer = RAdam(), loss = combined_loss, metrics = losses)
 
-    # test_generator = DataGenerator(
-    #     set_type = "test",
-    #     batch_size = 1,
-    #     shuffle = False,
-    #     keep_ratio = 0.0026,
-    #     shape = input_shape,
-    # )
-
     train_generator = DataGenerator(
+        args = args,
         set_type = "train",
         batch_size = args.batchsize,
-        shuffle = True,
+        shuffle = not args.no_shuffle,
         keep_ratio = args.train_keep,
         shape = input_shape,
     )
     val_generator = DataGenerator(
+        args = args,
         set_type = "val",
         batch_size = 1,
-        shuffle = True,
+        shuffle = not args.no_shuffle,
         keep_ratio = args.val_keep,
         shape = input_shape,
     )
@@ -75,7 +64,7 @@ def train(args):
             generator = train_generator,
             validation_data = val_generator,
             use_multiprocessing = False,
-            shuffle = True,
+            shuffle = not args.no_shuffle,
             epochs = args.epochs,
             max_queue_size = 32,
             callbacks = callbacks,
@@ -89,25 +78,28 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description = 'Monocular Depth Estimation on Synthetic Dataset with Dense Ground Truth')
 
-    # todo
     parser.add_argument('--id', type = int, default = 0, help = 'Train id')
     parser.add_argument('--batchsize', type = int, default = 1, help = 'Batch size')
-    parser.add_argument('--epochs', type = int, default = 1, help = 'Number of epochs')
+    parser.add_argument('--epochs', type = int, default = 42, help = 'Number of epochs')
     parser.add_argument('--eval_freq', type = int, default = 100, help = 'todo')
 
-    parser.add_argument('--train_keep', type = float, default = 0.001, help = 'Number of epochs')
-    parser.add_argument('--val_keep', type = float, default = 0.01, help = 'Number of epochs')
-    parser.add_argument('--test_keep', type = float, default = 0.1, help = 'Number of epochs')
+    parser.add_argument('--train_keep', type = float, default = 1, help = '-')
+    parser.add_argument('--val_keep', type = float, default = 1, help = '-')
+    parser.add_argument('--test_keep', type = float, default = 1, help = '-')
 
     parser.add_argument('--name', default = 'debug', type = str, help = 'Name prefix')
     parser.add_argument('--checkpoint', type = str, default = '', help = 'Start training from an existing model.')
     parser.add_argument('--shape', type = str, default = '(576, 1024)', help = 'Start training from an existing model.')
 
-    parser.add_argument('--shuffle', dest = 'shuffle', action = 'store_true', help = 'Turn shuffle on or off')
+    # todo default false
+    parser.add_argument('--no_shuffle', dest = 'no_shuffle', action = 'store_true', help = 'Turn shuffle off')
+    parser.add_argument('--overfit', dest = 'overfit', action = 'store_true', help = 'Overfit on test set')
 
     args = parser.parse_args()
     
     args.shape = eval(args.shape)
 
+    print(vars(args))
     train(args)
     print((time.time() - start), "s")
+    
