@@ -7,6 +7,43 @@ import matplotlib.image as mpimg
 
 from helper_functions import *
 
+from keras.preprocessing.image import ImageDataGenerator
+
+# todo no custom DataGenerator implementation needed:
+# todo check folder structure compatibility
+# todo check train_keep solution
+"""
+```python
+train_generator = ImageDataGenerator(
+    rescale = 1. / 255,
+    shear_range = 0.2,
+    zoom_range = 0.2,
+    horizontal_flip = True)
+    
+
+train_input_generator = train_generator.flow_from_directory(
+    'data/train/input',
+    target_size = (150, 150),
+    batch_size = 32,
+    class_mode = 'binary')
+    
+train_output_generator = train_generator.flow_from_directory(
+    'data/train/output',
+    target_size = (150, 150),
+    batch_size = 32,
+    class_mode = 'binary')
+    
+   
+def combined_generator(input_generator, output_generator):
+    for input, output in zip(input_generator, output_generator):
+        yield (input, output)
+
+
+model.fit_generator(
+    train_generator,
+    ...)
+```
+"""
 
 def depth_converter(depth):
     R = depth[:, :, 0]
