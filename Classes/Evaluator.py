@@ -45,7 +45,6 @@ class Evaluator:
             groundtruth = batch[1][0]
             prediction = self.model.predict(batch[0])[0]
 
-
             batch_result_values = []
             for metric_function in self.metric_functions:
                 if i == 0 and metric_function.__name__ not in result_names:
@@ -86,7 +85,26 @@ class Evaluator:
 
         return results
 
-    def export_images(self, epoch):
+    def save_image(self, image, images_path, best, epoch_str, name, equalize):
+        # todo Adaptive Histogram Equalization: https://towardsdatascience.com/histogram-equalization-5d1013626e64
+        if equalize:
+            image = equalize_depth_values(image, 0.4, 0, 0.4)
+
+        image = 1 - image
+
+        bgra = to_bgra(image)
+
+        if best or epoch_str == "":
+            folder_name = ""
+        else:
+            folder_name = name
+
+        folder = os.path.join(images_path, folder_name)
+        os.path.exists(folder) or os.makedirs(folder)
+        cv2.imwrite(os.path.join(folder, epoch_str + name + ".png"), bgra)
+
+    def export_images(self, epoch = 0, best = False):
+        print("Saving images")
 
         batch = self.test_generator.__getitem__(0)
         rgb_images = batch[0]
@@ -94,56 +112,38 @@ class Evaluator:
         predictions = self.model.predict(rgb_images)
         prediction = predictions[0]
 
-        image_types = ["prediction", "prediction_equalized", "absolute_error", "first_derivative_error",
-                       "second_derivative_error"]
-        images_path = os.path.join(self.save_folder, "images")
-        for images_type in image_types:
-            if not os.path.exists(os.path.join(images_path, images_type)):
-                os.makedirs(os.path.join(images_path, images_type))
+        if best:
+            epoch_str = ""
+            save_folder = os.path.join(self.save_folder, "best")
 
-        epoch_str = "epoch_" + str(epoch) + "_"
+        else:
+            epoch_str = "epoch_" + str(epoch) + "_"
+            save_folder = os.path.join(self.save_folder, "images")
 
-        print("Saving images")
-        if epoch == 1:
-            cv2.imwrite(os.path.join(images_path, "rgb_input.png"), rgb_images[0])
+        self.save_image(groundtruth, save_folder, best, "", "groundtruth", False)
+        self.save_image(groundtruth, save_folder, best, "", "groundtruth_equalized", True)
 
-            bgra_gt = to_bgra(1 - groundtruth)
-            cv2.imwrite(os.path.join(images_path, "groundtruth.png"), bgra_gt)
+        self.save_image(prediction, save_folder, best, "", "prediction", False)
+        self.save_image(prediction, save_folder, best, "", "prediction_equalized", True)
 
-            bgra_gt = to_bgra(1 - equalize_depth_values(groundtruth, 0.4, 0, 0.4))
-            cv2.imwrite(os.path.join(images_path, "groundtruth_equalized.png"), bgra_gt)
-
-        # todo implement multiprocessing write_image(image, image_path, name = "pred", folder = "")
-
-        bgra_gt = to_bgra(1 - prediction)
-        cv2.imwrite(os.path.join(images_path, "prediction", epoch_str + "prediction.png"), bgra_gt)
-
-        bgra_gt = to_bgra(1 - equalize_depth_values(prediction, 0.4, 0, 0.4))
-        cv2.imwrite(os.path.join(images_path, "prediction_equalized", epoch_str + "prediction_equalized.png"), bgra_gt)
+        cv2.imwrite(os.path.join(save_folder, "rgb_input.png"), rgb_images[0])
 
         groundtruth = tf.convert_to_tensor(batch[1])
         prediction = tf.convert_to_tensor(predictions)
 
         absolute_error_image = get_absolute_error_image(groundtruth, prediction).eval()[0]
-        bgra_gt = to_bgra(1 - absolute_error_image)
-        cv2.imwrite(os.path.join(images_path, "absolute_error", epoch_str + "absolute_error.png"), bgra_gt)
-
         first_derivative_error_image = get_first_derivative_error_image(groundtruth, prediction).eval()[0]
-        bgra_gt = to_bgra(1 - first_derivative_error_image)
-        cv2.imwrite(os.path.join(images_path, "first_derivative_error", epoch_str + "first_derivative_error.png"),
-                    bgra_gt)
-
         second_derivative_error_image = get_second_derivative_error_image(groundtruth, prediction).eval()[0]
-        bgra_gt = to_bgra(1 - second_derivative_error_image)
-        cv2.imwrite(os.path.join(images_path, "second_derivative_error", epoch_str + "second_derivative_error.png"),
-                    bgra_gt)
 
+        self.save_image(absolute_error_image, save_folder, best, epoch_str, "absolute_error_image", False)
+        self.save_image(absolute_error_image, save_folder, best, epoch_str, "absolute_error_image_equalized", True)
 
-if __name__ == '__main__':
-    # evaluator = Evaluator(os.path.join("./results", "debug"), shape = (108, 192))
-    # # todo
-    # # evaluator.load_model()
-    # evaluator.evaluate_metrics()
-    # evaluator.export_images(0)
+        self.save_image(first_derivative_error_image, save_folder, best, epoch_str, "first_derivative_error_image",
+                        False)
+        self.save_image(first_derivative_error_image, save_folder, best, epoch_str,
+                        "first_derivative_error_image_equalized", True)
 
-    pass
+        self.save_image(second_derivative_error_image, save_folder, best, epoch_str, "second_derivative_error_image",
+                        False)
+        self.save_image(second_derivative_error_image, save_folder, best, epoch_str,
+                        "second_derivative_error_image_equalized", True)

@@ -22,6 +22,7 @@ def first_derivative_loss(y_true, y_pred, weight = 1):
 
 
 def second_derivative(tensor):
+    # todo check out Hesse matrix
     dy, dx = tf.image.image_gradients(tensor)
 
     d2y, _ = tf.image.image_gradients(dy[:, :-1, :, :])

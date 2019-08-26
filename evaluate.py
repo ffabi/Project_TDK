@@ -15,9 +15,14 @@ def evaluate(args, save_folder):
         evaluator = Evaluator(args, save_folder)
         evaluator.set_model(model)
 
-        evaluator.evaluate_metrics()
-        evaluator.evaluate_losses()
-        evaluator.export_images("best")
+        # evaluator.evaluate_metrics()
+        # evaluator.evaluate_losses()
+
+        evaluator.export_images(best = True)
+
+        # evaluator.export_images("best")
+
+
 
         # all_values = OrderedDict(vars(args))
         # all_values.update(metrics)
@@ -37,17 +42,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description = 'Monocular Depth Estimation on Synthetic Dataset with Dense Ground Truth')
 
-    parser.add_argument('--id', type = int, default = 0, help = 'Train id')
-    parser.add_argument('--batchsize', type = int, default = 1, help = 'Batch size')
-    parser.add_argument('--epochs', type = int, default = 42, help = 'Number of epochs')
-    parser.add_argument('--eval_freq', type = int, default = 100, help = 'todo')
-
-    parser.add_argument('--train_keep', type = float, default = 1, help = '-')
-    parser.add_argument('--val_keep', type = float, default = 1, help = '-')
     parser.add_argument('--test_keep', type = float, default = 1, help = '-')
 
-    parser.add_argument('--name', default = 'debug', type = str, help = 'Name prefix')
-    parser.add_argument('--checkpoint', type = str, default = '', help = 'Start training from an existing model.')
+    parser.add_argument('--name', default = 'second_long_3_0_08_22_20_54', type = str, help = 'Name prefix')
     parser.add_argument('--shape', type = str, default = '(576, 1024)', help = 'Start training from an existing model.')
 
     parser.add_argument('--no_shuffle', dest = 'no_shuffle', action = 'store_true', help = 'Turn shuffle off')
@@ -58,4 +55,4 @@ if __name__ == '__main__':
     args.shape = eval(args.shape)
 
     print("args:", vars(args))
-    evaluate(args, "../results/second_long_3_0_08_22_20_54")
+    evaluate(args, "../results/" + args.name)
