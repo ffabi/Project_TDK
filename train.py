@@ -9,14 +9,10 @@ from evaluate import evaluate
 
 
 def train(args):
-    tf.set_random_seed(1234)
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction = 0.8)
-    sess = tf.Session(config = tf.ConfigProto(gpu_options = gpu_options))
-
     if args.load is not None:
-        model_path = os.path.join(args.load, "model.h5")
+        model_path = os.path.join("../results", args.load, "model.h5")
         model = OriginalModel.load_trained_model(model_path)
-        name = args.load
+        name = args.load + "_continued"
 
     else:
         print("Creating model with input shape:", args.shape)
@@ -34,9 +30,9 @@ def train(args):
         )
 
         losses = lossgen.get_losses()
-        combined_loss = losses[-1]
+        combined_weighted_loss = losses[-1]
 
-        model.compile(optimizer = Adam(lr = 0.0001, decay = 0), loss = combined_loss, metrics = losses[:-1])
+        model.compile(optimizer = Adam(lr = 0.0001, decay = 0), loss = combined_weighted_loss, metrics = losses[:-1])
 
     train_generator = DataGenerator(
         args = args,
@@ -60,19 +56,18 @@ def train(args):
 
     callbacks = get_callbacks(args, results_folder)
 
-    with sess.as_default():
-        print("Starting training process")
-        sess.run(tf.global_variables_initializer())
-        model.fit_generator(
-            generator = train_generator,
-            validation_data = val_generator,
-            use_multiprocessing = False,
-            shuffle = not args.no_shuffle,
-            epochs = args.epochs,
-            max_queue_size = 32,
-            callbacks = callbacks,
-            # callbacks = None,
-        )
+    print("Starting training process")
+    sess.run(tf.global_variables_initializer())
+    model.fit_generator(
+        generator = train_generator,
+        validation_data = val_generator,
+        use_multiprocessing = False,
+        shuffle = not args.no_shuffle,
+        epochs = args.epochs,
+        max_queue_size = 32,
+        callbacks = callbacks,
+        # callbacks = None,
+    )
 
     return results_folder
 
@@ -110,7 +105,14 @@ if __name__ == "__main__":
     args.shape = eval(args.shape) + (3,)
 
     print(vars(args))
-    results_folder = train(args)
-    evaluate(args, results_folder)
+
+    tf.set_random_seed(1234)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction = 0.8)
+    sess = tf.Session(config = tf.ConfigProto(gpu_options = gpu_options))
+
+    with sess.as_default():
+
+        results_folder = train(args)
+        evaluate(args, results_folder)
 
     print((time.time() - start), "s")

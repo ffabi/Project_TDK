@@ -8,31 +8,25 @@ import os
 
 
 def evaluate(args, save_folder):
-    with sess.as_default():
-        model_path = os.path.join(save_folder, "model.h5")
-        model = load_trained_model(model_path)
+    model_path = os.path.join(save_folder, "model.h5")
+    model = load_trained_model(model_path)
 
-        evaluator = Evaluator(args, save_folder)
-        evaluator.set_model(model)
+    evaluator = Evaluator(args, save_folder)
+    evaluator.set_model(model)
 
-        # evaluator.evaluate_metrics()
-        # evaluator.evaluate_losses()
+    evaluator.export_images(best = True)
 
-        evaluator.export_images(best = True)
-
-        # evaluator.export_images("best")
-
-
-
-        # all_values = OrderedDict(vars(args))
-        # all_values.update(metrics)
-        #
-        # on_train_end_csvlogger = CSVLogger("../results/collected_trains_" + str(len(all_values)) + ".csv", separator = ',',
-        #                                    append = True)
-        # on_train_end_csvlogger.on_train_begin()
-        # on_train_end_csvlogger.set_model(model)
-        # on_train_end_csvlogger.on_epoch_end(epoch_counter, all_values)
-        # on_train_end_csvlogger.on_train_end()
+    # metrics = evaluator.evaluate_metrics()
+    # losses = evaluator.evaluate_losses()
+    #
+    # metrics.update(losses)
+    #
+    # on_train_end_csvlogger = CSVLogger("../results/collected_trains_" + str(len(metrics)) + ".csv", separator = ',',
+    #                                    append = True)
+    # on_train_end_csvlogger.on_train_begin()
+    # on_train_end_csvlogger.set_model(model)
+    # on_train_end_csvlogger.on_epoch_end(epoch_counter, metrics)
+    # on_train_end_csvlogger.on_train_end()
 
 
 if __name__ == '__main__':
@@ -55,4 +49,7 @@ if __name__ == '__main__':
     args.shape = eval(args.shape)
 
     print("args:", vars(args))
-    evaluate(args, "../results/" + args.name)
+
+    with sess.as_default():
+
+        evaluate(args, "../results/" + args.name)

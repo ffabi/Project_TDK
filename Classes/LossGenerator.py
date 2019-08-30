@@ -22,7 +22,16 @@ def first_derivative_loss(y_true, y_pred, weight = 1):
 
 
 def second_derivative(tensor):
-    # todo check out Hesse matrix
+    # todo check out Hesse matrix and this:
+
+    # def second_derivative(x):
+    #     assert x.dim() == 4, "expected 4-dimensional data, but instead got {}".format(x.dim())
+    #     horizontal = 2 * x[:, :, 1:-1, 1:-1] - x[:, :, 1:-1, :-2] - x[:, :, 1:-1, 2:]
+    #     vertical = 2 * x[:, :, 1:-1, 1:-1] - x[:, :, :-2, 1:-1] - x[:, :, 2:, 1:-1]
+    #     der_2nd = horizontal.abs() + vertical.abs()
+    #     return der_2nd.mean()
+    #
+
     dy, dx = tf.image.image_gradients(tensor)
 
     d2y, _ = tf.image.image_gradients(dy[:, :-1, :, :])
@@ -104,14 +113,14 @@ class LossGenerator:
                    second_derivative_loss(y_true, y_pred, self.second_grad_w) + \
                    ssim_loss(y_true, y_pred, self.ssim_w)
 
-        def combined__loss(y_true, y_pred):
+        def combined_loss(y_true, y_pred):
             return mae(y_true, y_pred) + \
                    mse(y_true, y_pred) + \
                    first_derivative_loss(y_true, y_pred) + \
                    second_derivative_loss(y_true, y_pred) + \
                    ssim_loss(y_true, y_pred)
 
-        return [mae, mse, first_derivative_loss, second_derivative_loss, ssim_loss, combined__loss,
+        return [mae, mse, first_derivative_loss, second_derivative_loss, ssim_loss, combined_loss,
                 combined_weighted_loss]
 
 

@@ -94,8 +94,10 @@ class Evaluator:
 
         bgra = to_bgra(image)
 
-        if best or epoch_str == "":
+        if epoch_str == "":
             folder_name = ""
+        elif best:
+            folder_name = "best"
         else:
             folder_name = name
 
@@ -123,8 +125,8 @@ class Evaluator:
         self.save_image(groundtruth, save_folder, best, "", "groundtruth", False)
         self.save_image(groundtruth, save_folder, best, "", "groundtruth_equalized", True)
 
-        self.save_image(prediction, save_folder, best, "", "prediction", False)
-        self.save_image(prediction, save_folder, best, "", "prediction_equalized", True)
+        self.save_image(prediction, save_folder, best, epoch_str, "prediction", False)
+        self.save_image(prediction, save_folder, best, epoch_str, "prediction_equalized", True)
 
         cv2.imwrite(os.path.join(save_folder, "rgb_input.png"), rgb_images[0])
 
@@ -135,15 +137,17 @@ class Evaluator:
         first_derivative_error_image = get_first_derivative_error_image(groundtruth, prediction).eval()[0]
         second_derivative_error_image = get_second_derivative_error_image(groundtruth, prediction).eval()[0]
 
-        self.save_image(absolute_error_image, save_folder, best, epoch_str, "absolute_error_image", False)
-        self.save_image(absolute_error_image, save_folder, best, epoch_str, "absolute_error_image_equalized", True)
+        self.save_image(absolute_error_image, save_folder, best, epoch_str,
+                        "absolute_error_image", False)
+        self.save_image(absolute_error_image, save_folder, best, epoch_str,
+                        "absolute_error_image_equalized", True)
 
-        self.save_image(first_derivative_error_image, save_folder, best, epoch_str, "first_derivative_error_image",
-                        False)
+        self.save_image(first_derivative_error_image, save_folder, best, epoch_str,
+                        "first_derivative_error_image", False)
         self.save_image(first_derivative_error_image, save_folder, best, epoch_str,
                         "first_derivative_error_image_equalized", True)
 
-        self.save_image(second_derivative_error_image, save_folder, best, epoch_str, "second_derivative_error_image",
-                        False)
+        self.save_image(second_derivative_error_image, save_folder, best, epoch_str,
+                        "second_derivative_error_image", False)
         self.save_image(second_derivative_error_image, save_folder, best, epoch_str,
                         "second_derivative_error_image_equalized", True)

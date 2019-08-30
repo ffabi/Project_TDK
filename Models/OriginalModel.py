@@ -121,7 +121,7 @@ def create_model(shape, debug = False):
 def load_trained_model(model_file: str) -> Model:
     assert os.path.exists(model_file), "Model not found: {}".format(model_file)
 
-    # custom_objects = { "BilinearUpSampling2D": BilinearUpSampling2D }
+    # todo save and load loss objects as well
     lossgen = LossGenerator(
         mae_w = 1,
         mse_w = 1,

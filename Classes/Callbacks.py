@@ -27,8 +27,6 @@ class CustomCallback(Callback):
             shutil.rmtree(dst)
         shutil.copytree(".", dst)
 
-
-
     def on_epoch_end(self, epoch, logs = None):
         self.evaluator.export_images(epoch + 1)
 
@@ -65,8 +63,8 @@ def get_callbacks(args, save_folder):
 
     tensorboard = TensorBoard(
         log_dir = save_folder,
-        write_graph = True,
-        write_grads = True,
+        write_graph = False,
+        write_grads = False,
         write_images = False,
         update_freq = 1000,
     )
@@ -74,5 +72,15 @@ def get_callbacks(args, save_folder):
 
     csvlogger = CSVLogger(os.path.join(save_folder, "train.csv"), separator = ',', append = True)
     callbacklist.append(csvlogger)
+
+    reduce_lr = ReduceLROnPlateau(
+        monitor = 'val_loss',
+        factor = 0.32,
+        patience = 5,
+        min_lr = 0.00001,
+        verbose = 1,
+        min_delta = 0.005
+    )
+    callbacklist.append(reduce_lr)
 
     return [callbacklist]
