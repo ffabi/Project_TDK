@@ -1,1 +1,1 @@
-This project is under construction, final ETA is December
+This project is heavily under construction, final ETA is December
