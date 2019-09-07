@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--id", type = int, default = 0, help = "Train id")
     parser.add_argument("--batchsize", type = int, default = 1, help = "Batch size")
-    parser.add_argument("--epochs", type = int, default = 42, help = "Number of epochs")
+    parser.add_argument("--epochs", type = int, default = 62, help = "Number of epochs")
     parser.add_argument("--eval_freq", type = int, default = 100, help = "todo")
 
     parser.add_argument("--train_keep", type = float, default = 1, help = "-")

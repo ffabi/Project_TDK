@@ -75,11 +75,11 @@ def get_callbacks(args, save_folder):
 
     reduce_lr = ReduceLROnPlateau(
         monitor = 'val_loss',
-        factor = 0.32,
-        patience = 5,
-        min_lr = 0.00001,
+        factor = 0.5,
+        patience = 4,
+        min_lr = 0.000001,
         verbose = 1,
-        min_delta = 0.005
+        min_delta = 0.002
     )
     callbacklist.append(reduce_lr)
 

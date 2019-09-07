@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--test_keep', type = float, default = 1, help = '-')
 
-    parser.add_argument('--name', default = 'second_long_3_0_08_22_20_54', type = str, help = 'Name prefix')
+    parser.add_argument('--name', default = '0_decay_08_31_09_20', type = str, help = 'Name prefix')
     parser.add_argument('--shape', type = str, default = '(576, 1024)', help = 'Start training from an existing model.')
 
     parser.add_argument('--no_shuffle', dest = 'no_shuffle', action = 'store_true', help = 'Turn shuffle off')

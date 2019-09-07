@@ -97,7 +97,6 @@ class LossGenerator:
             self.second_grad_w = args.second_grad_w
             self.ssim_w = args.ssim_w
 
-
     def set_weights(self, mae_w = 1, mse_w = 1, first_grad_w = 1, second_grad_w = 1, ssim_w = 1) -> None:
         self.mae_w = mae_w
         self.mse_w = mse_w

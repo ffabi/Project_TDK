@@ -1,10 +1,5 @@
 
-
-load model to evaluate
-separate eval (aftermath.py to be called after train)
-fix csv export: write only val result trugh training and eval/test results at the end
-
-dropout
+encoder dropout
 
 save terminal output to file
 
