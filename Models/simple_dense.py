@@ -1,8 +1,6 @@
-from keras.layers import Input, Conv2D, Flatten, Dense, Conv2DTranspose, Lambda, Reshape, BatchNormalization, \
-    MaxPooling2D, UpSampling2D
-from keras.models import Model
-
 import tensorflow as tf
+from keras.layers import Input, Dense
+from keras.models import Model
 
 
 def create_model(shape):
@@ -23,7 +21,7 @@ if __name__ == '__main__':
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction = 0.1)
     sess = tf.Session(config = tf.ConfigProto(gpu_options = gpu_options))
 
-    model = create_model(shape = (720, 1280, 3))
+    model = create_model(shape = (576, 1024, 3))
     model.summary()
     for l in model.layers:
         print(l.name, l.input_shape, l.output_shape)

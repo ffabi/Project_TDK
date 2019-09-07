@@ -13,17 +13,14 @@ def to_bgra(depth):
 def equalize_depth_values(depth, cut = 0.4, amin = None, amax = None):
     _depth = depth.copy()
     _depth[_depth < 0] = 0
-    if amin is None:
-        amin = np.amin(_depth)
-        print(amin)
+    amin = amin or np.amin(_depth)
     _depth[_depth < 0.99] -= amin
-    if amax is None:
-        amax = np.amax(_depth[_depth < cut])
-        print(amax)
+    amax = amax or np.amax(_depth[_depth < cut])
     if amax != 0:
         _depth[_depth < 0.99] /= amax
     _depth[_depth > 0.99] = 1
     _depth **=.33
 
     return _depth
+
 

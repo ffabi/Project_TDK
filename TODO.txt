@@ -1,24 +1,19 @@
 
-implement paper Quantitative evaluation metrics (Metrics.py)
-separate eval (aftermath.py to be called after train)
-fix csv export: write only val result trugh training and eval/test results at the end
+encoder dropout
 
-dropout
-
-load model to evaluate
+save terminal output to file
 
 fix network size, measure performance
 
-args
-
 save args
+
+check second derivative correctness: use hesse matrix
 
 analyze data: take average depth, disttribution, etc
 
-eval on whole test set at train end
+eval on KITTI
 
 Karpathy: final bias to the mean
-
 Visualize layers
 freeze first (2-3) pretrained layers
 
