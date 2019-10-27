@@ -1,1 +1,1 @@
-This project is heavily under construction, final ETA is December
+This is final stage of the Project TDK
