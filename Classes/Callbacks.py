@@ -3,16 +3,14 @@ import shutil
 from keras.callbacks import *
 
 from Classes.Evaluator import *
-from helper_functions import *
-
 
 class CustomCallback(Callback):
 
-    def __init__(self, args, save_folder) -> None:
+    def __init__(self, args, save_folder, input_shape, output_shape) -> None:
         super().__init__()
         self.save_folder = save_folder
         self.args = args
-        self.evaluator = Evaluator(args, self.save_folder)
+        self.evaluator = Evaluator(args, self.save_folder, input_shape, output_shape)
 
         if not os.path.exists(self.save_folder):
             os.makedirs(self.save_folder)
@@ -28,13 +26,13 @@ class CustomCallback(Callback):
         shutil.copytree(".", dst)
 
     def on_epoch_end(self, epoch, logs = None):
-        self.evaluator.export_images(epoch + 1)
+        self.evaluator.export_images(epoch + 1, semseg = self.args.output_type=="multitask")
 
 
-def get_callbacks(args, save_folder):
+def get_callbacks(args, save_folder, input_shape, output_shape):
     callbacklist = CallbackList()
 
-    customcallback = CustomCallback(args, save_folder)
+    customcallback = CustomCallback(args, save_folder, input_shape, output_shape)
     callbacklist.append(customcallback)
 
     earlystop = EarlyStopping(
@@ -63,7 +61,7 @@ def get_callbacks(args, save_folder):
 
     tensorboard = TensorBoard(
         log_dir = save_folder,
-        write_graph = False,
+        write_graph = True,
         write_grads = False,
         write_images = False,
         update_freq = 1000,
@@ -75,11 +73,11 @@ def get_callbacks(args, save_folder):
 
     reduce_lr = ReduceLROnPlateau(
         monitor = 'val_loss',
-        factor = 0.5,
-        patience = 4,
+        factor = 0.7,
+        patience = 5,
         min_lr = 0.000001,
         verbose = 1,
-        min_delta = 0.002
+        min_delta = 0.003,
     )
     callbacklist.append(reduce_lr)
 

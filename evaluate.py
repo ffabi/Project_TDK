@@ -11,7 +11,10 @@ def evaluate(args, save_folder):
     model_path = os.path.join(save_folder, "model.h5")
     model = load_trained_model(model_path)
 
-    evaluator = Evaluator(args, save_folder)
+    input_shape = model.layers[0].output.shape
+    output_shape = model.layers[-1].output.shape
+
+    evaluator = Evaluator(args, save_folder, input_shape, output_shape)
     evaluator.set_model(model)
 
     evaluator.export_images(best = True)
@@ -43,6 +46,9 @@ if __name__ == '__main__':
 
     parser.add_argument('--no_shuffle', dest = 'no_shuffle', action = 'store_true', help = 'Turn shuffle off')
     parser.add_argument('--overfit', dest = 'overfit', action = 'store_true', help = 'Overfit on test set')
+
+    parser.add_argument('--input_shape', type = str, default = "(576, 1024, 3)", help = "Start training from an existing model.")
+    parser.add_argument('--output_shape', type = str, default = "(576, 1024, 1)", help = "Start training from an existing model.")
 
     args = parser.parse_args()
 

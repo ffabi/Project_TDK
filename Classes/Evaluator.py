@@ -1,3 +1,5 @@
+import os
+
 import cv2
 from keras import Model
 
@@ -6,11 +8,13 @@ from Classes.LossGenerator import *
 from Classes.Metrics import get_eval_metrics
 from helper_functions import *
 
+import matplotlib.cm as cm
+
 
 class Evaluator:
     model: Model
 
-    def __init__(self, args, save_folder) -> None:
+    def __init__(self, args, save_folder, input_shape, output_shape) -> None:
         super().__init__()
         self.save_folder = save_folder
 
@@ -20,7 +24,9 @@ class Evaluator:
             batch_size = 1,
             shuffle = False,
             keep_ratio = args.test_keep,
-            shape = args.shape
+            shape = args.shape,
+            input_type = args.input_type,
+            output_type = args.output_type,
         )
 
         assert len(self.test_generator), "No data received from the data generator"
@@ -85,14 +91,14 @@ class Evaluator:
 
         return results
 
-    def save_image(self, image, images_path, best, epoch_str, name, equalize):
-        # todo Adaptive Histogram Equalization: https://towardsdatascience.com/histogram-equalization-5d1013626e64
-        if equalize:
-            image = equalize_depth_values(image, 0.4, 0, 0.4)
+    def save_image(self, image, images_path, best, epoch_str, name, equalize, depth = True):
+        if depth:
+            if equalize:
+                image = equalize_depth_values(image, 0.4, 0, 0.4)
 
-        image = 1 - image
+            image = 1 - image
 
-        bgra = to_bgra(image)
+            image = to_bgra(image)
 
         if epoch_str == "":
             folder_name = ""
@@ -103,16 +109,17 @@ class Evaluator:
 
         folder = os.path.join(images_path, folder_name)
         os.path.exists(folder) or os.makedirs(folder)
-        cv2.imwrite(os.path.join(folder, epoch_str + name + ".png"), bgra)
+        cv2.imwrite(os.path.join(folder, epoch_str + name + ".png"), image)
 
-    def export_images(self, epoch = 0, best = False):
+    def export_images(self, epoch = 0, best = False, semseg = False):
         print("Saving images")
 
         batch = self.test_generator.__getitem__(0)
         rgb_images = batch[0]
-        groundtruth = batch[1][0]
+        groundtruth = batch[1][0][..., :1]
         predictions = self.model.predict(rgb_images)
-        prediction = predictions[0]
+
+        prediction_depth = predictions[0][..., :1]
 
         if best:
             epoch_str = ""
@@ -125,17 +132,32 @@ class Evaluator:
         self.save_image(groundtruth, save_folder, best, "", "groundtruth", False)
         self.save_image(groundtruth, save_folder, best, "", "groundtruth_equalized", True)
 
-        self.save_image(prediction, save_folder, best, epoch_str, "prediction", False)
-        self.save_image(prediction, save_folder, best, epoch_str, "prediction_equalized", True)
+        if semseg:
+            prediction_semseg = predictions[0][..., 1:]
+            prediction_semseg = onehot_to_semseg_converter(prediction_semseg)
+            self.save_image(prediction_semseg, save_folder, best, epoch_str, "semseg_prediction", False, depth = False)
+            self.save_image(11 * prediction_semseg, save_folder, best, epoch_str, "semseg_prediction_eq", False,
+                            depth = False)
+            self.save_image(cm.hsv(prediction_semseg[..., 2] / 23.)[..., :3] * 255, save_folder, best, epoch_str, "semseg_prediction_jet", False,
+                            depth = False)
 
-        cv2.imwrite(os.path.join(save_folder, "rgb_input.png"), rgb_images[0])
+            onehot_gt = onehot_to_semseg_converter(batch[1][0][..., 1:])
+            cv2.imwrite(os.path.join(save_folder, "semseg_groundtruth.png"), onehot_gt)
+            self.save_image(11 * onehot_gt, save_folder, best, epoch_str, "semseg_groundtruth_eq", False, depth = False)
+            cv2.imwrite(os.path.join(save_folder, "semseg_groundtruth_jet.png"),
+                        cm.hsv(onehot_gt[..., 2] / 23.)[..., :3] * 255)
+
+        self.save_image(prediction_depth, save_folder, best, epoch_str, "prediction", False)
+        self.save_image(prediction_depth, save_folder, best, epoch_str, "prediction_equalized", True)
+
+        cv2.imwrite(os.path.join(save_folder, "rgb_input.png"), rgb_images[0][:, :, :3])
 
         groundtruth = tf.convert_to_tensor(batch[1])
-        prediction = tf.convert_to_tensor(predictions)
+        prediction_depth = tf.convert_to_tensor(predictions)
 
-        absolute_error_image = get_absolute_error_image(groundtruth, prediction).eval()[0]
-        first_derivative_error_image = get_first_derivative_error_image(groundtruth, prediction).eval()[0]
-        second_derivative_error_image = get_second_derivative_error_image(groundtruth, prediction).eval()[0]
+        absolute_error_image = get_absolute_error_image(groundtruth, prediction_depth).eval()[0]
+        first_derivative_error_image = get_first_derivative_error_image(groundtruth, prediction_depth).eval()[0]
+        second_derivative_error_image = get_second_derivative_error_image(groundtruth, prediction_depth).eval()[0]
 
         self.save_image(absolute_error_image, save_folder, best, epoch_str,
                         "absolute_error_image", False)

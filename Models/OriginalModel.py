@@ -57,21 +57,15 @@ class BilinearUpSampling2D(Layer):
 # the model has been taken from https://github.com/ialhashim/DenseDepth/blob/master/model.py
 
 
-def create_model(shape, debug = False):
+def create_model(input_shape, semseg = False):
     print("Loading model: DenseNet169")
 
-    # Encoder Layers
-    if not debug:
-        base_model = applications.DenseNet169(
-            input_shape = (None, None, 3),
-            include_top = False,
-            # dropout_rate = 0.5 # todo update libraries
-        )
-    else:
-        base_model = applications.DenseNet169(
-            input_shape = shape,
-            include_top = False
-        )
+    base_model = applications.DenseNet169(
+        input_shape = input_shape,
+        include_top = False,
+        weights = None,
+        # dropout_rate = 0.5 # todo update libraries
+    )
 
     # Starting point for decoder
     base_model_output_shape = base_model.layers[-1].output.shape
@@ -84,8 +78,8 @@ def create_model(shape, debug = False):
     # Starting number of decoder filters
     decode_filters = int(int(base_model_output_shape[-1]) / 2)
 
-    # Define upsampling layer
-    def upproject(tensor, filters, name, concat_with):
+    # Define upsampling layer for depth
+    def upproject_depth(tensor, filters, name, concat_with):
         up_i = BilinearUpSampling2D((2, 2), name = name + "_upsampling2d")(tensor)
         up_i = Concatenate(name = name + "_concat")(
             [up_i, base_model.get_layer(concat_with).output])  # Skip connection
@@ -103,20 +97,49 @@ def create_model(shape, debug = False):
     decoder = Conv2D(filters = decode_filters, kernel_size = 1, padding = "same",
                      input_shape = base_model_output_shape, name = "conv2")(base_model.output)
 
-    decoder = upproject(decoder, int(decode_filters / 2), "up1", concat_with = "pool3_pool")
-    decoder = upproject(decoder, int(decode_filters / 4), "up2", concat_with = "pool2_pool")
-    decoder = upproject(decoder, int(decode_filters / 8), "up3", concat_with = "pool1")
-    decoder = upproject(decoder, int(decode_filters / 16), "up4", concat_with = "conv1/relu")
-    decoder = upproject(decoder, int(decode_filters / 32), "up5", concat_with = "input_1")
+    depth_decoder = upproject_depth(decoder, int(decode_filters / 2), "depth_up1", concat_with = "pool3_pool")
+    depth_decoder = upproject_depth(depth_decoder, int(decode_filters / 4), "depth_up2", concat_with = "pool2_pool")
+    depth_decoder = upproject_depth(depth_decoder, int(decode_filters / 8), "depth_up3", concat_with = "pool1")
+    depth_decoder = upproject_depth(depth_decoder, int(decode_filters / 16), "depth_up4", concat_with = "conv1/relu")
+    depth_decoder = upproject_depth(depth_decoder, int(decode_filters / 32), "depth_up5", concat_with = "input_1")
 
     # Extract depths (final layer)
-    conv3 = Conv2D(filters = 1, kernel_size = 3, strides = 1, padding = "same", name = "conv3")(decoder)
+    depth_conv3 = Conv2D(filters = 1, kernel_size = 3, strides = 1, padding = "same", name = "depth_output")(depth_decoder)
 
-    # Create the model
-    model = Model(inputs = base_model.input, outputs = conv3)
+    if semseg:
+        # Define upsampling layer for semantic segmentation
+        def upproject_semseg(tensor, filters, name, concat_with):
+            up_i = BilinearUpSampling2D((2, 2), name = name + "_upsampling2d")(tensor)
+            up_i = Concatenate(name = name + "_concat")(
+                [up_i, base_model.get_layer(concat_with).output])  # Skip connection
+            up_i = Conv2D(filters = filters, kernel_size = 3, strides = 1, padding = "same", name = name + "_convA")(
+                up_i)
+            # up_i = Dropout(0.5)(up_i)
+            up_i = LeakyReLU(alpha = 0.2)(up_i)
+            up_i = Conv2D(filters = filters, kernel_size = 3, strides = 1, padding = "same", name = name + "_convB")(
+                up_i)
+            # up_i = Dropout(0.5)(up_i)
+            up_i = LeakyReLU(alpha = 0.2)(up_i)
+            return up_i
+
+        semseg_decoder = upproject_semseg(decoder, int(decode_filters / 2), "semseg_up1", concat_with = "pool3_pool")
+        semseg_decoder = upproject_semseg(semseg_decoder, int(decode_filters / 4), "semseg_up2", concat_with = "pool2_pool")
+        semseg_decoder = upproject_semseg(semseg_decoder, int(decode_filters / 8), "semseg_up3", concat_with = "pool1")
+        semseg_decoder = upproject_semseg(semseg_decoder, int(decode_filters / 16), "semseg_up4", concat_with = "conv1/relu")
+        semseg_decoder = upproject_semseg(semseg_decoder, int(decode_filters / 32), "semseg_up5", concat_with = "input_1")
+
+        # Extract depths (final layer)
+        semseg_conv3 = Conv2D(filters = 23, kernel_size = (1,1), strides = 1, padding = "same", name = "semseg_output")(semseg_decoder)
+
+        output = Concatenate(name = "output")([depth_conv3, semseg_conv3])
+
+        # Create the model
+        model = Model(inputs = base_model.input, outputs = output)
+
+    else:
+        model = Model(inputs = base_model.input, outputs = depth_conv3)
 
     return model
-
 
 def load_trained_model(model_file: str) -> Model:
     assert os.path.exists(model_file), "Model not found: {}".format(model_file)
@@ -128,6 +151,8 @@ def load_trained_model(model_file: str) -> Model:
         first_grad_w = 1,
         second_grad_w = 1,
         ssim_w = 1,
+        iou_w = 1,
+        semseg_w = 1,
     )
 
     losses = lossgen.get_losses()
@@ -144,10 +169,10 @@ def load_trained_model(model_file: str) -> Model:
 
 
 if __name__ == "__main__":
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction = 0.02)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction = 0.01)
     sess = tf.Session(config = tf.ConfigProto(gpu_options = gpu_options))
-
-    model = create_model((576, 1024, 3), debug = True)
-    model.summary()
-    for l in model.layers[:10]:
-        print(l.name, l.input_shape, l.output_shape)
+    with sess.as_default():
+        model = create_model((576, 1024, 6), semseg = True)
+        model.summary()
+    # for l in model.layers[:10]:
+    #     print(l.name, l.input_shape, l.output_shape)

@@ -7,7 +7,8 @@ def single_thread_resize(args_tuple):
     size_x, size_y = args_tuple[2], args_tuple[3]
 
     image_file = cv2.imread(read_path)
-    new_image = cv2.resize(image_file, (size_x, size_y))
+    # new_image = cv2.resize(image_file, (size_x, size_y))
+    new_image = cv2.resize(image_file, (size_x, size_y), interpolation=cv2.INTER_NEAREST)
     cv2.imwrite(write_path, new_image)
 
 def create_resized_dataset(size_x, size_y, forced = False):
@@ -30,7 +31,7 @@ def create_resized_dataset(size_x, size_y, forced = False):
     
     image_paths = []
     
-    folder_types = ["RGBLeft", "RGBRight", "DepthLeft", "DepthRight"]
+    folder_types = ["RGBLeft", "RGBRight", "DepthLeft", "DepthRight", "GTLeft", "GTright"]
     for folder in folders:
         for folder_type in folder_types:
             files = os.listdir(os.path.join(read_path, folder, folder_type))
@@ -61,6 +62,6 @@ if __name__ == '__main__':
     # create_resized_dataset(1920 / 2, 1080 / 2)
     # create_resized_dataset(1920 / 4, 1080 / 4)
     # create_resized_dataset(1920 / 8, 1080 / 8)
-    create_resized_dataset(1024, 576)
+    create_resized_dataset(1024, 576, forced = True)
     # create_resized_dataset(1920 / 8, 1080 / 8)
     print((time.time() - start))
